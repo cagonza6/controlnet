@@ -1,0 +1,95 @@
+diff --git a/cldm/cldm.py b/cldm/cldm.py
+index 0b3ac7a..aa45a34 100644
+--- a/cldm/cldm.py
++++ b/cldm/cldm.py
+@@ -424,12 +424,12 @@ class ControlLDM(LatentDiffusion):
+ 
+     def low_vram_shift(self, is_diffusing):
+         if is_diffusing:
+-            self.model = self.model.cuda()
+-            self.control_model = self.control_model.cuda()
++            self.model = self.model.cpu()
++            self.control_model = self.control_model.cpu()
+             self.first_stage_model = self.first_stage_model.cpu()
+             self.cond_stage_model = self.cond_stage_model.cpu()
+         else:
+             self.model = self.model.cpu()
+             self.control_model = self.control_model.cpu()
+-            self.first_stage_model = self.first_stage_model.cuda()
+-            self.cond_stage_model = self.cond_stage_model.cuda()
++            self.first_stage_model = self.first_stage_model.cpu()
++            self.cond_stage_model = self.cond_stage_model.cpu()
+diff --git a/cldm/ddim_hacked.py b/cldm/ddim_hacked.py
+index 25b1bc9..e07f7f9 100644
+--- a/cldm/ddim_hacked.py
++++ b/cldm/ddim_hacked.py
+@@ -16,8 +16,8 @@ class DDIMSampler(object):
+ 
+     def register_buffer(self, name, attr):
+         if type(attr) == torch.Tensor:
+-            if attr.device != torch.device("cuda"):
+-                attr = attr.to(torch.device("cuda"))
++            if attr.device != torch.device("cpu"):
++                attr = attr.to(torch.device("cpu"))
+         setattr(self, name, attr)
+ 
+     def make_schedule(self, ddim_num_steps, ddim_discretize="uniform", ddim_eta=0., verbose=True):
+diff --git a/config.py b/config.py
+index e0c738d..8e5bfdc 100644
+--- a/config.py
++++ b/config.py
+@@ -1 +1 @@
+-save_memory = False
++save_memory = True
+diff --git a/environment.yaml b/environment.yaml
+index 91463f0..3c458de 100644
+--- a/environment.yaml
++++ b/environment.yaml
+@@ -33,3 +33,6 @@ dependencies:
+       - prettytable==3.6.0
+       - safetensors==0.2.7
+       - basicsr==1.4.2
++      - fastapi==0.115.8
++      - pydantic==1.10.0
++
+diff --git a/ldm/modules/encoders/modules.py b/ldm/modules/encoders/modules.py
+index 4edd549..1369479 100644
+--- a/ldm/modules/encoders/modules.py
++++ b/ldm/modules/encoders/modules.py
+@@ -92,7 +92,7 @@ class FrozenCLIPEmbedder(AbstractEncoder):
+         "pooled",
+         "hidden"
+     ]
+-    def __init__(self, version="openai/clip-vit-large-patch14", device="cuda", max_length=77,
++    def __init__(self, version="openai/clip-vit-large-patch14", device="cpu", max_length=77,
+                  freeze=True, layer="last", layer_idx=None):  # clip-vit-base-patch32
+         super().__init__()
+         assert layer in self.LAYERS
+diff --git a/tool_add_control.py b/tool_add_control.py
+index 8076b51..9fa7cac 100644
+--- a/tool_add_control.py
++++ b/tool_add_control.py
+@@ -6,7 +6,7 @@ assert len(sys.argv) == 3, 'Args are wrong.'
+ input_path = sys.argv[1]
+ output_path = sys.argv[2]
+ 
+-assert os.path.exists(input_path), 'Input model does not exist.'
++assert os.path.exists(input_path), 'Input model does not exist.' + str(input_path)
+ assert not os.path.exists(output_path), 'Output filename already exists.'
+ assert os.path.exists(os.path.dirname(output_path)), 'Output path is not valid.'
+ 
+diff --git a/myfastapi/myawesomedemo/main.py b/myfastapi/myawesomedemo/main.py
+index 31aa05e..4b47650 100644
+--- a/myfastapi/myawesomedemo/main.py
++++ b/myfastapi/myawesomedemo/main.py
+@@ -1,8 +1,8 @@
+ """Main function for running the API service."""
+ # mypy: ignore-errors
+ import uvicorn
+-from app import create_application
+-from app.configs import get_settings
++from .app import create_application
++from .app.configs import get_settings
+ 
+ app = create_application()
+ settings = get_settings()
